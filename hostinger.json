@@ -1,0 +1,14 @@
+{
+  "name": "rss-reader",
+  "version": "1.0.0",
+  "type": "nodejs",
+  "entry": "server.js",
+  "env": {
+    "NODE_ENV": "production",
+    "PORT": "3000"
+  },
+  "build": {
+    "install": "npm install",
+    "start": "node server.js"
+  }
+}

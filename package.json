@@ -1,0 +1,17 @@
+{
+  "name": "rss-reader",
+  "version": "1.0.0",
+  "description": "Local RSS reader like Google Reader",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "rss-parser": "^3.13.0",
+    "node-cron": "^3.0.3"
+  }
+}

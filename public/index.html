@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RSS Reader</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <!-- Left sidebar: Feeds -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h1 class="app-title">📰 RSS Reader</h1>
+      <div class="header-actions">
+        <button id="btn-refresh-all" class="icon-btn" title="刷新全部">⟳</button>
+        <button id="btn-add-feed" class="icon-btn primary" title="添加订阅">+</button>
+      </div>
+    </div>
+
+    <div class="feeds-list">
+      <div class="feed-item active" data-feed="all" data-title="全部">
+        <span class="feed-icon">📥</span>
+        <span class="feed-name">全部</span>
+        <span class="feed-count" id="count-all">0</span>
+      </div>
+      <div class="feed-item" data-feed="saved" data-title="已收藏">
+        <span class="feed-icon">⭐</span>
+        <span class="feed-name">已收藏</span>
+        <span class="feed-count" id="count-saved">0</span>
+      </div>
+      <div class="feed-divider">—— 导航 ——</div>
+      <div class="feed-item" id="btn-open-discovery" data-action="discovery">
+        <span class="feed-icon">🔭</span>
+        <span class="feed-name">发现订阅</span>
+      </div>
+      <div class="feed-divider">—— 订阅源 ——</div>
+      <div id="feeds-container"></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span id="last-updated" class="last-updated"></span>
+    </div>
+  </aside>
+
+  <!-- Middle: Article list -->
+  <section id="article-list-panel">
+    <div class="panel-header">
+      <h2 id="current-feed-title">全部</h2>
+      <div class="panel-actions">
+        <input id="search-input" type="text" placeholder="搜索文章..." class="search-input">
+        <button id="btn-mark-all-read" class="text-btn" title="全部标为已读">✓ 已读</button>
+      </div>
+    </div>
+    <div id="article-list"></div>
+    <div id="loading-indicator" class="loading-indicator" style="display:none">
+      <div class="spinner"></div>
+      <span>加载中...</span>
+    </div>
+    <div id="empty-state" class="empty-state" style="display:none">
+      <p>暂无文章</p>
+    </div>
+  </section>
+
+  <!-- Discovery Panel -->
+  <div id="discovery-panel" class="discovery-panel">
+    <div class="discovery-header">
+      <h2>🔭 发现订阅</h2>
+      <button id="btn-close-discovery" class="icon-btn" title="关闭">✕</button>
+    </div>
+    <div class="discovery-search-wrap">
+      <input id="discovery-search" type="text" placeholder="搜索订阅源..." class="discovery-search">
+    </div>
+    <div id="discovery-categories"></div>
+    <div id="discovery-list" class="discovery-list"></div>
+    <div id="discovery-loading" class="loading-indicator" style="display:none">
+      <div class="spinner"></div><span>加载中...</span>
+    </div>
+  </div>
+  <div id="discovery-overlay" class="discovery-overlay" style="display:none"></div>
+
+  <!-- Right: Article reader -->
+  <main id="reader-panel">
+    <div id="reader-empty">
+      <div class="reader-empty-content">
+        <div class="reader-icon">📖</div>
+        <p>选择一篇文章阅读</p>
+      </div>
+    </div>
+    <article id="reader-content" style="display:none">
+      <div class="reader-header">
+        <div class="reader-meta">
+          <span id="reader-feed-name" class="reader-feed-name"></span>
+          <span id="reader-date" class="reader-date"></span>
+        </div>
+        <div class="reader-actions">
+          <button id="btn-toggle-read" class="text-btn" title="标记已读/未读">↩ 未读</button>
+          <button id="btn-toggle-save" class="text-btn" title="收藏">☆ 收藏</button>
+          <button id="btn-open-original" class="text-btn" title="查看原文" target="_blank">↗ 原文</button>
+        </div>
+      </div>
+      <h1 id="reader-title" class="reader-title"></h1>
+      <div id="reader-body" class="reader-body"></div>
+    </article>
+  </main>
+</div>
+
+<!-- Add Feed Modal -->
+<div id="modal-add-feed" class="modal" style="display:none">
+  <div class="modal-backdrop"></div>
+  <div class="modal-box">
+    <h3>添加订阅源</h3>
+    <input id="feed-url-input" type="url" placeholder="输入 RSS/Atom 链接..." autofocus>
+    <div class="modal-hint">支持 RSS 2.0、Atom 1.0 格式</div>
+    <div class="modal-actions">
+      <button id="btn-modal-cancel" class="btn secondary">取消</button>
+      <button id="btn-modal-add" class="btn primary">添加</button>
+    </div>
+    <div id="modal-error" class="modal-error"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
