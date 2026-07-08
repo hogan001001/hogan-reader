@@ -19,6 +19,25 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const FEEDS_FILE = path.join(DATA_DIR, 'feeds.json');
 const ARTICLES_FILE = path.join(DATA_DIR, 'articles.json');
 
+// --- 内存缓存配置 ---
+const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
+const fetchCache = new Map(); // { feedId: { promise, timestamp } }
+
+function getCachedOrFetch(feedId, fetchFn) {
+  const cached = fetchCache.get(feedId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.promise;
+  }
+  const promise = fetchFn().finally(() => {
+    // 缓存结果
+    fetchCache.set(feedId, { promise: Promise.resolve(), timestamp: Date.now() });
+    // 5分钟后清除缓存，允许重新抓取
+    setTimeout(() => fetchCache.delete(feedId), CACHE_TTL);
+  });
+  fetchCache.set(feedId, { promise, timestamp: Date.now() });
+  return promise;
+}
+
 // --- Popular Discovery Feeds ---
 const DISCOVERY_FEEDS = [
   { id: 'dis_sspai', name: '少数派', desc: '数字生活派，实用工具与效率方法', url: 'https://sspai.com/feed', category: '科技' },
@@ -180,6 +199,16 @@ app.get('/api/articles', (req, res) => {
 
   result.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
   res.json(result);
+  
+  // 后台静默刷新（如果有缓存则跳过）
+  if (feeds.length > 0 && (!feedId || feedId === 'all')) {
+    for (const feed of feeds) {
+      getCachedOrFetch(feed.id, () => fetchFeed(feed.id, feed.url));
+    }
+  } else if (feedId && feedId !== 'all') {
+    const feed = feeds.find(f => f.id === feedId);
+    if (feed) getCachedOrFetch(feedId, () => fetchFeed(feedId, feed.url));
+  }
 });
 
 // Discovery: list popular feeds
@@ -331,20 +360,19 @@ cron.schedule('*/30 * * * *', async () => {
   console.log('[Cron] Refreshing all feeds...');
   const feeds = loadFeeds();
   for (const feed of feeds) {
-    await fetchFeed(feed.id, feed.url);
+    await getCachedOrFetch(feed.id, () => fetchFeed(feed.id, feed.url));
   }
   console.log('[Cron] Done refreshing all feeds.');
 });
 
-// Initial startup refresh
+// Initial startup: 静默后台刷新，不阻塞启动
 setTimeout(async () => {
   const feeds = loadFeeds();
   if (feeds.length > 0) {
-    console.log('Initial feed refresh...');
+    console.log('Initial feed refresh (background)...');
     for (const feed of feeds) {
-      await fetchFeed(feed.id, feed.url);
+      getCachedOrFetch(feed.id, () => fetchFeed(feed.id, feed.url));
     }
-    console.log('Initial refresh done.');
   }
 }, 3000);
 
