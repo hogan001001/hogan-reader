@@ -14,8 +14,8 @@ const parser = new Parser({
   }
 });
 
-// 支持环境变量配置数据目录（Hostinger 持久化存储）
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+// 数据目录：保存在项目根目录的 data 文件夹
+const DATA_DIR = path.join(__dirname, 'data');
 const FEEDS_FILE = path.join(DATA_DIR, 'feeds.json');
 const ARTICLES_FILE = path.join(DATA_DIR, 'articles.json');
 
