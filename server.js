@@ -14,7 +14,8 @@ const parser = new Parser({
   }
 });
 
-const DATA_DIR = path.join(__dirname, 'data');
+// 支持环境变量配置数据目录（Hostinger 持久化存储）
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const FEEDS_FILE = path.join(DATA_DIR, 'feeds.json');
 const ARTICLES_FILE = path.join(DATA_DIR, 'articles.json');
 
@@ -347,7 +348,9 @@ setTimeout(async () => {
   }
 }, 3000);
 
-const PORT = 3000;
+// 支持环境变量配置端口（Hostinger 需要动态端口）
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`RSS Reader running at http://localhost:${PORT}`);
+  console.log(`Data directory: ${DATA_DIR}`);
 });
