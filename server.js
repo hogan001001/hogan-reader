@@ -102,53 +102,61 @@ function parseUrl(feedUrl) {
   });
 }
 
-// --- Fetch single feed ---
-async function fetchFeed(feedId, feedUrl) {
-  try {
-    const xml = await parseUrl(feedUrl);
-    const parsed = await parser.parseString(xml);
-    const feedData = {
-      title: parsed.title || feedUrl,
-      description: parsed.description || '',
-      link: parsed.link || '',
-      image: parsed.image?.url || parsed.icon || '',
-      updatedAt: new Date().toISOString()
-    };
+// --- Fetch single feed with retry ---
+async function fetchFeed(feedId, feedUrl, retries = 2) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const xml = await parseUrl(feedUrl);
+      const parsed = await parser.parseString(xml);
+      const feedData = {
+        title: parsed.title || feedUrl,
+        description: parsed.description || '',
+        link: parsed.link || '',
+        image: parsed.image?.url || parsed.icon || '',
+        updatedAt: new Date().toISOString()
+      };
 
-    const articles = loadArticles();
-    if (!articles[feedId]) articles[feedId] = [];
+      const articles = loadArticles();
+      if (!articles[feedId]) articles[feedId] = [];
 
-    const existingLinks = new Set(articles[feedId].map(a => a.link));
+      const existingLinks = new Set(articles[feedId].map(a => a.link));
 
-    const newItems = (parsed.items || []).map(item => ({
-      id: Buffer.from((item.guid || item.link || item.title + Date.now()).substring(0, 200)).toString('base64').replace(/\//g, '_'),
-      title: item.title || 'No title',
-      link: item.link || '',
-      description: item.contentSnippet || item.summary || item.content || '',
-      content: item.content || item['content:encoded'] || '',
-      author: item.creator || item.author || '',
-      pubDate: item.pubDate || item.isoDate || new Date().toISOString(),
-      read: existingLinks.has(item.link) ? (articles[feedId].find(a => a.link === item.link)?.read || false) : false,
-      saved: articles[feedId].find(a => (item.guid || item.link) === a.link)?.saved || false
-    }));
+      const newItems = (parsed.items || []).map(item => ({
+        id: Buffer.from((item.guid || item.link || item.title + Date.now()).substring(0, 200)).toString('base64').replace(/\//g, '_'),
+        title: item.title || 'No title',
+        link: item.link || '',
+        description: item.contentSnippet || item.summary || item.content || '',
+        content: item.content || item['content:encoded'] || '',
+        author: item.creator || item.author || '',
+        pubDate: item.pubDate || item.isoDate || new Date().toISOString(),
+        read: existingLinks.has(item.link) ? (articles[feedId].find(a => a.link === item.link)?.read || false) : false,
+        saved: articles[feedId].find(a => (item.guid || item.link) === a.link)?.saved || false
+      }));
 
-    // Merge: keep existing, add new
-    const merged = [...newItems];
-    for (const existing of articles[feedId]) {
-      if (!newItems.find(n => n.link === existing.link)) {
-        merged.push(existing);
+      // Merge: keep existing, add new
+      const merged = [...newItems];
+      for (const existing of articles[feedId]) {
+        if (!newItems.find(n => n.link === existing.link)) {
+          merged.push(existing);
+        }
+      }
+
+      // Sort by date desc, keep latest 500
+      merged.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+      articles[feedId] = merged.slice(0, 500);
+      saveArticles(articles);
+
+      return { success: true, feed: feedData, count: newItems.length };
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        console.log(`[${feedId}] Fetch failed, retry ${attempt + 1}/${retries}: ${err.message}`);
+        await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
       }
     }
-
-    // Sort by date desc, keep latest 500
-    merged.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-    articles[feedId] = merged.slice(0, 500);
-    saveArticles(articles);
-
-    return { success: true, feed: feedData, count: newItems.length };
-  } catch (err) {
-    return { success: false, error: err.message };
   }
+  return { success: false, error: lastError?.message || 'Unknown error' };
 }
 
 // --- REST API ---
